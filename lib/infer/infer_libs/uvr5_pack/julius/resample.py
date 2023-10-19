@@ -174,8 +174,7 @@ def _kernel_upsample2_downsample2(zeros):
     winodd = win[1::2]
     t = torch.linspace(-zeros + 0.5, zeros - 0.5, 2 * zeros)
     t *= math.pi
-    kernel = (sinc(t) * winodd).view(1, 1, -1)
-    return kernel
+    return (sinc(t) * winodd).view(1, 1, -1)
 
 
 def _upsample2(x, zeros=24):

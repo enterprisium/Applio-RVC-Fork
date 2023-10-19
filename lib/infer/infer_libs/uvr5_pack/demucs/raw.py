@@ -47,10 +47,7 @@ class Rawset:
         self._lengths = []
         ref_streams = sorted(entries[self._entries[0]])
         assert ref_streams == list(range(len(ref_streams)))
-        if streams is None:
-            self.streams = ref_streams
-        else:
-            self.streams = streams
+        self.streams = ref_streams if streams is None else streams
         for entry in sorted(entries.keys()):
             streams = entries[entry]
             assert sorted(streams) == ref_streams
@@ -87,7 +84,7 @@ class Rawset:
                          local_index=local_index)
 
     def _path(self, folder, name, stream=0):
-        return self.path / folder / (name + f'.{stream}.raw')
+        return self.path / folder / f'{name}.{stream}.raw'
 
     def __getitem__(self, index):
         chunk = self.chunk_info(index)
@@ -96,7 +93,7 @@ class Rawset:
         length = self.samples or self._lengths[chunk.file_index]
         streams = []
         to_read = length * self.channels * 4
-        for stream_index, stream in enumerate(self.streams):
+        for stream in self.streams:
             offset = chunk.offset * 4 * self.channels
             file = open(self._path(*entry, stream=stream), 'rb')
             file.seek(offset)
@@ -142,7 +139,9 @@ def build_raw(mus, destination, normalize, workers, samplerate, channels):
             ref = streams[0].mean(dim=0)  # use mono mixture as reference
             streams = (streams - ref.mean()) / ref.std()
         for index, stream in enumerate(streams):
-            open(destination / (name + f'.{index}.raw'), "wb").write(stream.t().numpy().tobytes())
+            open(destination / f'{name}.{index}.raw', "wb").write(
+                stream.t().numpy().tobytes()
+            )
 
 
 def main():

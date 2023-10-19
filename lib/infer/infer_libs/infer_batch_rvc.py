@@ -131,10 +131,7 @@ def load_hubert():
     )
     hubert_model = models[0]
     hubert_model = hubert_model.to(device)
-    if is_half:
-        hubert_model = hubert_model.half()
-    else:
-        hubert_model = hubert_model.float()
+    hubert_model = hubert_model.half() if is_half else hubert_model.float()
     hubert_model.eval()
 
 
@@ -145,7 +142,7 @@ def vc_single(sid, input_audio, f0_up_key, f0_file, f0_method, file_index, index
     f0_up_key = int(f0_up_key)
     audio = load_audio(input_audio, 16000)
     times = [0, 0, 0]
-    if hubert_model == None:
+    if hubert_model is None:
         load_hubert()
     if_f0 = cpt.get("f0", 1)
     # audio_opt=vc.pipeline(hubert_model,net_g,sid,audio,times,f0_up_key,f0_method,file_index,file_big_npy,index_rate,if_f0,f0_file=f0_file)
@@ -175,7 +172,7 @@ def vc_single(sid, input_audio, f0_up_key, f0_file, f0_method, file_index, index
 
 def get_vc(model_path):
     global n_spk, tgt_sr, net_g, vc, cpt, device, is_half, version
-    print("loading pth %s" % model_path)
+    print(f"loading pth {model_path}")
     cpt = torch.load(model_path, map_location="cpu")
     tgt_sr = cpt["config"][-1]
     cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  # n_spk
@@ -194,10 +191,7 @@ def get_vc(model_path):
     del net_g.enc_q
     print(net_g.load_state_dict(cpt["weight"], strict=False))  # 不加这一行清不干净，真奇葩
     net_g.eval().to(device)
-    if is_half:
-        net_g = net_g.half()
-    else:
-        net_g = net_g.float()
+    net_g = net_g.half() if is_half else net_g.float()
     vc = VC(tgt_sr, config)
     n_spk = cpt["config"][-3]
     # return {"visible": True,"maximum": n_spk, "__type__": "update"}
@@ -207,9 +201,9 @@ get_vc(model_path)
 audios = os.listdir(input_path)
 for file in tq.tqdm(audios):
     if file.endswith(".wav"):
-        file_path = input_path + "/" + file
+        file_path = f"{input_path}/{file}"
         wav_opt = vc_single(
             0, file_path, f0up_key, None, f0method, index_path, index_rate
         )
-        out_path = opt_path + "/" + file
+        out_path = f"{opt_path}/{file}"
         wavfile.write(out_path, tgt_sr, wav_opt)

@@ -117,9 +117,7 @@ class MDX:
             if chunk_size <= 0 or chunk_size > sample_count:
                 chunk_size = sample_count
 
-            if margin_size > chunk_size:
-                margin_size = chunk_size
-
+            margin_size = min(margin_size, chunk_size)
             for segment_count, skip in enumerate(range(0, sample_count, chunk_size)):
 
                 margin = 0 if segment_count == 0 else margin_size
@@ -131,7 +129,7 @@ class MDX:
 
                 if end == sample_count:
                     break
-        
+
         return processed_wave
 
     def pad_wave(self, wave):

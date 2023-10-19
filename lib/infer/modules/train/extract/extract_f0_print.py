@@ -21,7 +21,7 @@ logging.getLogger("numba").setLevel(logging.WARNING)
 from multiprocessing import Process
 
 exp_dir = sys.argv[1]
-f = open("%s/extract_f0_feature.log" % exp_dir, "a+")
+f = open(f"{exp_dir}/extract_f0_feature.log", "a+")
 
 DoFormant = False
 Quefrency = 1.0
@@ -189,12 +189,15 @@ class FeatureInput(object):
             if method in self.f0_method_dict:
                 f0 = self.f0_method_dict[method](x, p_len) if method == 'pm' else self.f0_method_dict[method](x)
                 f0_computation_stack.append(f0)
-            elif method == 'crepe' or method == 'mangio-crepe':
+            elif method in ['crepe', 'mangio-crepe']:
                 self.the_other_complex_function(x, method, crepe_hop_length)
 
-        if len(f0_computation_stack) != 0:        
-            f0_median_hybrid = np.nanmedian(f0_computation_stack, axis=0) if len(f0_computation_stack)>1 else f0_computation_stack[0]
-            return f0_median_hybrid
+        if f0_computation_stack:    
+            return (
+                np.nanmedian(f0_computation_stack, axis=0)
+                if len(f0_computation_stack) > 1
+                else f0_computation_stack[0]
+            )
         else:
             raise ValueError("No valid methods were provided")
 
@@ -239,12 +242,11 @@ class FeatureInput(object):
         with tqdm.tqdm(total=len(paths), leave=True, position=thread_n) as pbar:
             description = f"thread:{thread_n}, f0ing, Hop-Length:{crepe_hop_length}"
             pbar.set_description(description)
-                
+
             for idx, (inp_path, opt_path1, opt_path2) in enumerate(paths):
                 try:
-                    if (
-                        os.path.exists(opt_path1 + ".npy") 
-                        and os.path.exists(opt_path2 + ".npy")
+                    if os.path.exists(f"{opt_path1}.npy") and os.path.exists(
+                        f"{opt_path2}.npy"
                     ):
                         pbar.update(1)
                         continue
@@ -273,22 +275,22 @@ if __name__ == "__main__":
     printt(sys.argv)
     featureInput = FeatureInput()
     paths = []
-    inp_root = "%s/1_16k_wavs" % (exp_dir)
-    opt_root1 = "%s/2a_f0" % (exp_dir)
-    opt_root2 = "%s/2b-f0nsf" % (exp_dir)
+    inp_root = f"{exp_dir}/1_16k_wavs"
+    opt_root1 = f"{exp_dir}/2a_f0"
+    opt_root2 = f"{exp_dir}/2b-f0nsf"
 
     os.makedirs(opt_root1, exist_ok=True)
     os.makedirs(opt_root2, exist_ok=True)
     for name in sorted(list(os.listdir(inp_root))):
-        inp_path = "%s/%s" % (inp_root, name)
+        inp_path = f"{inp_root}/{name}"
         if "spec" in inp_path:
             continue
-        opt_path1 = "%s/%s" % (opt_root1, name)
-        opt_path2 = "%s/%s" % (opt_root2, name)
+        opt_path1 = f"{opt_root1}/{name}"
+        opt_path2 = f"{opt_root2}/{name}"
         paths.append([inp_path, opt_path1, opt_path2])
 
     ps = []
-    print("Using f0 method: " + f0method)
+    print(f"Using f0 method: {f0method}")
     for i in range(n_p):
         p = Process(
             target=featureInput.go,

@@ -131,16 +131,15 @@ def main():
                         help="Bitrate of converted mp3.")
 
     args = parser.parse_args()
-    name = args.name + ".th"
+    name = f"{args.name}.th"
     model_path = args.models / name
     if model_path.is_file():
         model = load_model(model_path)
+    elif is_pretrained(args.name):
+        model = load_pretrained(args.name)
     else:
-        if is_pretrained(args.name):
-            model = load_pretrained(args.name)
-        else:
-            print(f"No pre-trained model {args.name}", file=sys.stderr)
-            sys.exit(1)
+        print(f"No pre-trained model {args.name}", file=sys.stderr)
+        sys.exit(1)
     model.to(args.device)
 
     out = args.out / args.name
@@ -169,13 +168,16 @@ def main():
             if args.mp3 or not args.float32:
                 source = (source * 2**15).clamp_(-2**15, 2**15 - 1).short()
             source = source.cpu()
-            stem = str(track_folder / name)
             if args.mp3:
-                encode_mp3(source, stem + ".mp3",
-                           bitrate=args.mp3_bitrate,
-                           samplerate=model.samplerate,
-                           channels=model.audio_channels,
-                           verbose=args.verbose)
+                stem = str(track_folder / name)
+                encode_mp3(
+                    source,
+                    f"{stem}.mp3",
+                    bitrate=args.mp3_bitrate,
+                    samplerate=model.samplerate,
+                    channels=model.audio_channels,
+                    verbose=args.verbose,
+                )
             else:
                 wavname = str(track_folder / f"{name}.wav")
                 ta.save(wavname, source, sample_rate=model.samplerate)

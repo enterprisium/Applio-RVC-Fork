@@ -24,10 +24,7 @@ def CSVutil(file, rw, type, *args):
                     else (lambda: exec('raise ValueError("No data")'))()
                 )
         else:
-            if args:
-                doformnt = args[0]
-            else:
-                doformnt = False
+            doformnt = args[0] if args else False
             qfr = args[1] if len(args) > 1 else 1.0
             tmb = args[2] if len(args) > 2 else 1.0
             with open(file, rw, newline="") as fileCSVwrite:

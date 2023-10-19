@@ -100,9 +100,6 @@ def load_audio(file, sr, DoFormant=False, Quefrency=1.0, Timbre=1.0):
                             capture_stderr=True,
                         )
                     )
-                else:
-                    pass
-
             file_formanted = (
                 f"{file_formanted}.wav"
                 if not file_formanted.endswith(".wav")
@@ -112,33 +109,27 @@ def load_audio(file, sr, DoFormant=False, Quefrency=1.0, Timbre=1.0):
             print(f" · Formanting {file_formanted}...\n")
 
             os.system(
-                '%s -i "%s" -q "%s" -t "%s" -o "%sFORMANTED_%s.wav"'
-                % (
-                    stft,
-                    file_formanted,
-                    Quefrency,
-                    Timbre,
-                    file_formanted,
-                    str(numerator),
-                )
+                f'{stft} -i "{file_formanted}" -q "{Quefrency}" -t "{Timbre}" -o "{file_formanted}FORMANTED_{str(numerator)}.wav"'
             )
 
             print(f" · Formanted {file_formanted}!\n")
 
             out, _ = (
                 ffmpeg.input(
-                    "%sFORMANTED_%s.wav" % (file_formanted, str(numerator)), threads=0
+                    f"{file_formanted}FORMANTED_{str(numerator)}.wav",
+                    threads=0,
                 )
                 .output("-", format="f32le", acodec="pcm_f32le", ac=1, ar=sr)
                 .run(
-                    cmd=["ffmpeg", "-nostdin"], capture_stdout=True, capture_stderr=True
+                    cmd=["ffmpeg", "-nostdin"],
+                    capture_stdout=True,
+                    capture_stderr=True,
                 )
             )
 
             try:
-                os.remove("%sFORMANTED_%s.wav" % (file_formanted, str(numerator)))
+                os.remove(f"{file_formanted}FORMANTED_{str(numerator)}.wav")
             except Exception:
-                pass
                 print("couldn't remove formanted type of file")
 
         else:
@@ -156,7 +147,6 @@ def load_audio(file, sr, DoFormant=False, Quefrency=1.0, Timbre=1.0):
         try:
             os.remove(file_formanted)
         except Exception:
-            pass
             print("couldn't remove converted type of file")
         converted = False
 

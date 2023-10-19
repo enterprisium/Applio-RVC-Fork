@@ -60,8 +60,8 @@ def mel_frequencies(n_mels: int, fmin: float, fmax: float):
 
 
     """
-    low = hz_to_mel(torch.tensor(float(fmin))).item()
-    high = hz_to_mel(torch.tensor(float(fmax))).item()
+    low = hz_to_mel(torch.tensor(fmin)).item()
+    high = hz_to_mel(torch.tensor(fmax)).item()
     mels = torch.linspace(low, high, n_mels)
     return mel_to_hz(mels)
 
@@ -114,9 +114,7 @@ def unfold(input, kernel_size: int, stride: int):
     n_frames = math.ceil((max(length, kernel_size) - kernel_size) / stride) + 1
     tgt_length = (n_frames - 1) * stride + kernel_size
     padded = F.pad(input, (0, tgt_length - length)).contiguous()
-    strides: tp.List[int] = []
-    for dim in range(padded.dim()):
-        strides.append(padded.stride(dim))
+    strides: tp.List[int] = [padded.stride(dim) for dim in range(padded.dim())]
     assert strides.pop(-1) == 1, 'data should be contiguous'
     strides = strides + [stride, 1]
     return padded.as_strided(shape + [n_frames, kernel_size], strides)

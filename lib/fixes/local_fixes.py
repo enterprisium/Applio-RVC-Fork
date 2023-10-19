@@ -10,7 +10,7 @@ def insert_new_line(file_name, line_to_find, text_to_insert):
     with open(file_name, 'r', encoding='utf-8') as read_obj:
         lines = read_obj.readlines()
     already_exists = False
-    with open(file_name + '.tmp', 'w', encoding='utf-8') as write_obj:
+    with open(f'{file_name}.tmp', 'w', encoding='utf-8') as write_obj:
         for i in range(len(lines)):
             write_obj.write(lines[i])
             if lines[i].strip() == line_to_find:
@@ -23,11 +23,11 @@ def insert_new_line(file_name, line_to_find, text_to_insert):
                     write_obj.write(text_to_insert + '\n')
     # If no existing sys.path.append line was found, replace the original file
     if not already_exists:
-        os.replace(file_name + '.tmp', file_name)
+        os.replace(f'{file_name}.tmp', file_name)
         return True
     else:
         # If existing line was found, delete temporary file
-        os.remove(file_name + '.tmp')
+        os.remove(f'{file_name}.tmp')
         return False
 
 def replace_in_file(file_name, old_text, new_text):
@@ -46,11 +46,10 @@ if __name__ == "__main__":
     current_path = os.getcwd()
     file_name = os.path.join(current_path, "lib", "infer", "modules", "train", "extract", "extract_f0_print.py")
     line_to_find = 'import numpy as np, logging'
-    text_to_insert = "sys.path.append(r'" + current_path + "')"
-    
+    text_to_insert = f"sys.path.append(r'{current_path}')"
+        
 
-    success_1 = insert_new_line(file_name, line_to_find, text_to_insert)
-    if success_1:
+    if success_1 := insert_new_line(file_name, line_to_find, text_to_insert):
         print('The first operation was successful!')
     else:
         print('He skipped the first operation because it was already fixed!')
@@ -59,14 +58,13 @@ if __name__ == "__main__":
     old_text = 'with gr.Blocks(theme=gr.themes.Soft()) as app:'
     new_text = 'with gr.Blocks() as app:'
 
-    success_2 = replace_in_file(file_name, old_text, new_text)
-    if success_2:
+    if success_2 := replace_in_file(file_name, old_text, new_text):
         print('The second operation was successful!')
     else:
         print('The second operation was omitted because it was already fixed!')
 
     print('Local corrections successful! You should now be able to infer and train locally in Applio RVC Fork.')
-    
+
     time.sleep(5)
 
 def find_torchcrepe_directory(directory):
@@ -74,10 +72,14 @@ def find_torchcrepe_directory(directory):
     Recursively searches for the topmost folder named 'torchcrepe' within a directory.
     Returns the path of the directory found or None if none is found.
     """
-    for root, dirs, files in os.walk(directory):
-        if 'torchcrepe' in dirs:
-            return os.path.join(root, 'torchcrepe')
-    return None
+    return next(
+        (
+            os.path.join(root, 'torchcrepe')
+            for root, dirs, files in os.walk(directory)
+            if 'torchcrepe' in dirs
+        ),
+        None,
+    )
 
 def download_and_extract_torchcrepe():
     url = 'https://github.com/maxrmorrison/torchcrepe/archive/refs/heads/master.zip'
@@ -112,9 +114,7 @@ def download_and_extract_torchcrepe():
             zip_file.extractall(temp_dir)
         print("Extraction completed.")
 
-        # Locate the torchcrepe folder and move it to the destination directory
-        torchcrepe_dir = find_torchcrepe_directory(temp_dir)
-        if torchcrepe_dir:
+        if torchcrepe_dir := find_torchcrepe_directory(temp_dir):
             shutil.move(torchcrepe_dir, destination_dir)
             print(f"Moved the torchcrepe directory to {destination_dir}!")
         else:

@@ -25,7 +25,7 @@ import sys
 
 # Nombre de usuario actual
 current_user = os.getlogin() or getpass.getuser()
-logger.info("Current user: %s" % current_user)
+logger.info(f"Current user: {current_user}")
 # Ruta de Python 3.9 para el usuario actual
 python_version = "39"
 #C:\Users\USUARIO\AppData\Local\Programs\Python\Python39
@@ -152,10 +152,7 @@ class Config:
         
     @staticmethod
     def has_xpu() -> bool:
-        if hasattr(torch, "xpu") and torch.xpu.is_available():
-            return True
-        else:
-            return False
+        return bool(hasattr(torch, "xpu") and torch.xpu.is_available())
 
     def use_fp32_config(self):
         for config_file in version_config_list:

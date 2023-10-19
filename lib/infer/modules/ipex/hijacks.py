@@ -11,11 +11,9 @@ class CondFunc: # pylint: disable=missing-class-docstring
         if isinstance(orig_func, str):
             func_path = orig_func.split('.')
             for i in range(len(func_path)-1, -1, -1):
-                try:
+                with contextlib.suppress(ImportError):
                     resolved_obj = importlib.import_module('.'.join(func_path[:i]))
                     break
-                except ImportError:
-                    pass
             for attr_name in func_path[i:-1]:
                 resolved_obj = getattr(resolved_obj, attr_name)
             orig_func = getattr(resolved_obj, func_path[-1])
@@ -72,7 +70,11 @@ def return_null_context(*args, **kwargs): # pylint: disable=unused-argument
     return contextlib.nullcontext()
 
 def check_device(device):
-    return bool((isinstance(device, torch.device) and device.type == "cuda") or (isinstance(device, str) and "cuda" in device) or isinstance(device, int))
+    return (
+        (isinstance(device, torch.device) and device.type == "cuda")
+        or (isinstance(device, str) and "cuda" in device)
+        or isinstance(device, int)
+    )
 
 def return_xpu(device):
     return f"xpu:{device[-1]}" if isinstance(device, str) and ":" in device else f"xpu:{device}" if isinstance(device, int) else torch.device("xpu") if isinstance(device, torch.device) else "xpu"
@@ -84,7 +86,7 @@ def ipex_no_cuda(orig_func, *args, **kwargs):
 
 original_autocast = torch.autocast
 def ipex_autocast(*args, **kwargs):
-    if len(args) > 0 and args[0] == "cuda":
+    if args and args[0] == "cuda":
         return original_autocast("xpu", *args[1:], **kwargs)
     else:
         return original_autocast(*args, **kwargs)
@@ -98,22 +100,20 @@ def torch_cat(tensor, *args, **kwargs):
 
 original_interpolate = torch.nn.functional.interpolate
 def interpolate(tensor, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None, antialias=False): # pylint: disable=too-many-arguments
-    if antialias or align_corners is not None:
-        return_device = tensor.device
-        return_dtype = tensor.dtype
-        return original_interpolate(tensor.to("cpu", dtype=torch.float32), size=size, scale_factor=scale_factor, mode=mode,
-        align_corners=align_corners, recompute_scale_factor=recompute_scale_factor, antialias=antialias).to(return_device, dtype=return_dtype)
-    else:
+    if not antialias and align_corners is None:
         return original_interpolate(tensor, size=size, scale_factor=scale_factor, mode=mode,
         align_corners=align_corners, recompute_scale_factor=recompute_scale_factor, antialias=antialias)
+    return_device = tensor.device
+    return_dtype = tensor.dtype
+    return original_interpolate(tensor.to("cpu", dtype=torch.float32), size=size, scale_factor=scale_factor, mode=mode,
+    align_corners=align_corners, recompute_scale_factor=recompute_scale_factor, antialias=antialias).to(return_device, dtype=return_dtype)
 
 original_linalg_solve = torch.linalg.solve
 def linalg_solve(A, B, *args, **kwargs): # pylint: disable=invalid-name
-    if A.device != torch.device("cpu") or B.device != torch.device("cpu"):
-        return_device = A.device
-        return original_linalg_solve(A.to("cpu"), B.to("cpu"), *args, **kwargs).to(return_device)
-    else:
+    if A.device == torch.device("cpu") and B.device == torch.device("cpu"):
         return original_linalg_solve(A, B, *args, **kwargs)
+    return_device = A.device
+    return original_linalg_solve(A.to("cpu"), B.to("cpu"), *args, **kwargs).to(return_device)
 
 def ipex_hijacks():
     CondFunc('torch.Tensor.to',

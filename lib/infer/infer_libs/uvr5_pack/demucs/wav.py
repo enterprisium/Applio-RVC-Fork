@@ -51,11 +51,8 @@ def _track_metadata(track, sources):
 
 
 def _build_metadata(path, sources):
-    meta = {}
     path = Path(path)
-    for file in path.iterdir():
-        meta[file.name] = _track_metadata(file, sources)
-    return meta
+    return {file.name: _track_metadata(file, sources) for file in path.iterdir()}
 
 
 class Wavset:
@@ -131,7 +128,7 @@ class Wavset:
 
 def get_wav_datasets(args, samples, sources):
     sig = hashlib.sha1(str(args.wav).encode()).hexdigest()[:8]
-    metadata_file = args.metadata / (sig + ".json")
+    metadata_file = args.metadata / f"{sig}.json"
     train_path = args.wav / "train"
     valid_path = args.wav / "valid"
     if not metadata_file.is_file() and args.rank == 0:

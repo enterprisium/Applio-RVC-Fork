@@ -80,7 +80,7 @@ class LowPassFilters(torch.nn.Module):
         self.stride = stride
         self.pad = pad
         self.zeros = zeros
-        self.half_size = int(zeros / min([c for c in self.cutoffs if c > 0]) / 2)
+        self.half_size = int(zeros / min(c for c in self.cutoffs if c > 0) / 2)
         if fft is None:
             fft = self.half_size > 32
         self.fft = fft

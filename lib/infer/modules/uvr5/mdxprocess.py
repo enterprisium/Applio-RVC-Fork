@@ -51,17 +51,20 @@ def id_to_ptm(mkey):
                 ["wget", _Models+mkey, "-O", mpath]
             )
             print(f'saved to {mpath}')
-            return mpath
-        else:
-            return mpath
     else:
         mpath = f'{now_dir}/assets/uvr5_weights/{mkey}'
-        return mpath
+
+    return mpath
 
 def prepare_mdx(onnx,custom_param=False, dim_f=None, dim_t=None, n_fft=None, stem_name=None, compensation=None):
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     if custom_param:
-        assert not (dim_f is None or dim_t is None or n_fft is None or compensation is None), 'Custom parameter selected, but incomplete parameters are provided.'
+        assert (
+            dim_f is not None
+            and dim_t is not None
+            and n_fft is not None
+            and compensation is not None
+        ), 'Custom parameter selected, but incomplete parameters are provided.'
         mdx_model = mdx.MDX_Model(
             device,
             dim_f = dim_f,

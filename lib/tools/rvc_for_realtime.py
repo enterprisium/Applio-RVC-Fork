@@ -38,8 +38,7 @@ if config.dml == True:
 
     def forward_dml(ctx, x, scale):
         ctx.scale = scale
-        res = x.clone().detach()
-        return res
+        return x.clone().detach()
 
     fairseq.modules.grad_multiply.GradMultiply.forward = forward_dml
 
@@ -92,10 +91,7 @@ class RVC:
                 )
                 hubert_model = models[0]
                 hubert_model = hubert_model.to(device)
-                if config.is_half:
-                    hubert_model = hubert_model.half()
-                else:
-                    hubert_model = hubert_model.float()
+                hubert_model = hubert_model.half() if config.is_half else hubert_model.float()
                 hubert_model.eval()
                 self.model = hubert_model
             else:
@@ -125,10 +121,7 @@ class RVC:
                 logger.debug(self.net_g.load_state_dict(cpt["weight"], strict=False))
                 self.net_g.eval().to(device)
                 # print(2333333333,device,config.device,self.device)#net_g是device，hubert是config.device
-                if config.is_half:
-                    self.net_g = self.net_g.half()
-                else:
-                    self.net_g = self.net_g.float()
+                self.net_g = self.net_g.half() if config.is_half else self.net_g.float()
                 self.is_half = config.is_half
             else:
                 self.tgt_sr = last_rvc.tgt_sr
@@ -269,14 +262,11 @@ class RVC:
 
             logger.info("Loading rmvpe model")
             self.model_rmvpe = RMVPE(
-                # "rmvpe.pt", is_half=self.is_half if self.device.type!="privateuseone" else False, device=self.device if self.device.type!="privateuseone"else "cpu"####dml时强制对rmvpe用cpu跑
-                #  "rmvpe.pt", is_half=False, device=self.device####dml配置
-                # "rmvpe.pt", is_half=False, device="cpu"####锁定cpu配置
-                "%s/rmvpe.pt" % os.environ["rmvpe_root"],
+                f'{os.environ["rmvpe_root"]}/rmvpe.pt',
                 is_half=self.is_half,
-                device=self.device,  ####正常逻辑
+                device=self.device,
             )
-            # self.model_rmvpe = RMVPE("aug2_58000_half.pt", is_half=self.is_half, device=self.device)
+                # self.model_rmvpe = RMVPE("aug2_58000_half.pt", is_half=self.is_half, device=self.device)
         f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
         f0 *= pow(2, f0_up_key / 12)
         return self.get_f0_post(f0)
@@ -292,10 +282,7 @@ class RVC:
         f0method,
     ) -> np.ndarray:
         feats = feats.view(1, -1)
-        if config.is_half:
-            feats = feats.half()
-        else:
-            feats = feats.float()
+        feats = feats.half() if config.is_half else feats.float()
         feats = feats.to(self.device)
         t1 = ttime()
         with torch.no_grad():

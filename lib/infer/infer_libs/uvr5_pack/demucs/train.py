@@ -65,10 +65,11 @@ def train_model(epoch,
 
             train_loss = loss + diffq * model_size
             train_loss.backward()
-            grad_norm = 0
-            for p in model.parameters():
-                if p.grad is not None:
-                    grad_norm += p.grad.data.norm()**2
+            grad_norm = sum(
+                p.grad.data.norm() ** 2
+                for p in model.parameters()
+                if p.grad is not None
+            )
             grad_norm = grad_norm**0.5
             optimizer.step()
             optimizer.zero_grad()
