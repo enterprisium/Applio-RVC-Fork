@@ -69,8 +69,8 @@ class MarkdownTable:
     def line(self, line):
         out = []
         for val, col in zip(line, self.columns):
-            val = format(val, '>' + str(len(col)))
-            out.append(" " + val + " ")
+            val = format(val, f'>{len(col)}')
+            out.append(f" {val} ")
         self._writeln(out)
 
 

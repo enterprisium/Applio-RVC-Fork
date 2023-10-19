@@ -21,9 +21,7 @@ def i16_pcm(wav):
 
 
 def f32_pcm(wav):
-    if wav.dtype == np.float:
-        return wav
-    return wav.float() / 2**15
+    return wav if wav.dtype == np.float else wav.float() / 2**15
 
 
 class RepitchedWrapper:
@@ -46,22 +44,20 @@ class RepitchedWrapper:
         in_length = streams.shape[-1]
         out_length = int((1 - 0.01 * self.max_tempo) * in_length)
 
-        if random.random() < self.proba:
-            delta_pitch = random.randint(-self.max_pitch, self.max_pitch)
-            delta_tempo = random.gauss(0, self.tempo_std)
-            delta_tempo = min(max(-self.max_tempo, delta_tempo), self.max_tempo)
-            outs = []
-            for idx, stream in enumerate(streams):
-                stream = repitch(
-                    stream,
-                    delta_pitch,
-                    delta_tempo,
-                    voice=idx in self.vocals)
-                outs.append(stream[:, :out_length])
-            streams = torch.stack(outs)
-        else:
-            streams = streams[..., :out_length]
-        return streams
+        if random.random() >= self.proba:
+            return streams[..., :out_length]
+        delta_pitch = random.randint(-self.max_pitch, self.max_pitch)
+        delta_tempo = random.gauss(0, self.tempo_std)
+        delta_tempo = min(max(-self.max_tempo, delta_tempo), self.max_tempo)
+        outs = []
+        for idx, stream in enumerate(streams):
+            stream = repitch(
+                stream,
+                delta_pitch,
+                delta_tempo,
+                voice=idx in self.vocals)
+            outs.append(stream[:, :out_length])
+        return torch.stack(outs)
 
 
 def repitch(wav, pitch, tempo, voice=False, quick=False, samplerate=44100):

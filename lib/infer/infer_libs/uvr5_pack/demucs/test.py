@@ -79,7 +79,7 @@ def evaluate(model,
                 folder = eval_folder / "wav/test" / track.name
                 folder.mkdir(exist_ok=True, parents=True)
                 for name, estimate in zip(model.sources, estimates):
-                    wavfile.write(str(folder / (name + ".wav")), 44100, estimate)
+                    wavfile.write(str(folder / f"{name}.wav"), 44100, estimate)
 
             if workers:
                 pendings.append((track.name, pool.submit(

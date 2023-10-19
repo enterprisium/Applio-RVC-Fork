@@ -119,10 +119,7 @@ class Demucs(nn.Module):
             self.encoder.append(nn.Sequential(*encode))
 
             decode = []
-            if index > 0:
-                out_channels = in_channels
-            else:
-                out_channels = len(self.sources) * audio_channels
+            out_channels = in_channels if index > 0 else len(self.sources) * audio_channels
             if rewrite:
                 decode += [nn.Conv1d(channels, ch_scale * channels, context), activation]
             decode += [nn.ConvTranspose1d(channels, out_channels, kernel_size, stride)]
@@ -134,11 +131,7 @@ class Demucs(nn.Module):
 
         channels = in_channels
 
-        if lstm_layers:
-            self.lstm = BLSTM(channels, lstm_layers)
-        else:
-            self.lstm = None
-
+        self.lstm = BLSTM(channels, lstm_layers) if lstm_layers else None
         if rescale:
             rescale_module(self, reference=rescale)
 

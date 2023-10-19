@@ -80,8 +80,10 @@ def _get_track_metadata(path):
 def _build_metadata(tracks, workers=10):
     pendings = []
     with futures.ProcessPoolExecutor(workers) as pool:
-        for name, path in tracks.items():
-            pendings.append((name, pool.submit(_get_track_metadata, path)))
+        pendings.extend(
+            (name, pool.submit(_get_track_metadata, path))
+            for name, path in tracks.items()
+        )
     return {name: p.result() for name, p in pendings}
 
 

@@ -93,8 +93,7 @@ class HighPassFilters(torch.nn.Module):
             start = self._lowpasses.half_size
             end = -start
         input = input[..., start:end:self.stride]
-        highs = input - lows
-        return highs
+        return input - lows
 
     def __repr__(self):
         return simple_repr(self)

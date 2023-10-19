@@ -140,9 +140,8 @@ class TensorChunk:
 def tensor_chunk(tensor_or_chunk):
     if isinstance(tensor_or_chunk, TensorChunk):
         return tensor_or_chunk
-    else:
-        assert isinstance(tensor_or_chunk, th.Tensor)
-        return TensorChunk(tensor_or_chunk)
+    assert isinstance(tensor_or_chunk, th.Tensor)
+    return TensorChunk(tensor_or_chunk)
 
 
 def apply_model(model, mix, shifts=None, split=False,
@@ -161,9 +160,9 @@ def apply_model(model, mix, shifts=None, split=False,
         progress (bool): if True, show a progress bar (requires split=True)
     """
     assert transition_power >= 1, "transition_power < 1 leads to weird behavior."
-    device = mix.device
     channels, length = mix.shape
     if split:
+        device = mix.device
         out = th.zeros(len(model.sources), channels, length, device=device)
         sum_weight = th.zeros(length, device=device)
         segment = model.segment_length
@@ -216,8 +215,10 @@ def apply_model(model, mix, shifts=None, split=False,
 def temp_filenames(count, delete=True):
     names = []
     try:
-        for _ in range(count):
-            names.append(tempfile.NamedTemporaryFile(delete=False).name)
+        names.extend(
+            tempfile.NamedTemporaryFile(delete=False).name
+            for _ in range(count)
+        )
         yield names
     finally:
         if delete:
@@ -248,16 +249,13 @@ def load_model(path, strict=False):
     args = package["args"]
     kwargs = package["kwargs"]
 
-    if strict:
-        model = klass(*args, **kwargs)
-    else:
+    if not strict:
         sig = inspect.signature(klass)
         for key in list(kwargs):
             if key not in sig.parameters:
-                warnings.warn("Dropping inexistant parameter " + key)
+                warnings.warn(f"Dropping inexistant parameter {key}")
                 del kwargs[key]
-        model = klass(*args, **kwargs)
-
+    model = klass(*args, **kwargs)
     state = package["state"]
     training_args = package["training_args"]
     quantizer = get_quantizer(model, training_args)
@@ -293,7 +291,7 @@ def save_state(state, path):
     th.save(state, buf)
     sig = hashlib.sha256(buf.getvalue()).hexdigest()[:8]
 
-    path = path.parent / (path.stem + "-" + sig + path.suffix)
+    path = path.parent / f"{path.stem}-{sig}{path.suffix}"
     path.write_bytes(buf.getvalue())
 
 

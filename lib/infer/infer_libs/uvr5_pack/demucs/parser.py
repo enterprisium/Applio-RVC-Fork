@@ -209,7 +209,7 @@ def get_name(parser, args):
     Return the name of an experiment given the args. Some parameters are ignored,
     for instance --workers, as they do not impact the final result.
     """
-    ignore_args = set([
+    ignore_args = {
         "checkpoints",
         "deterministic",
         "eval",
@@ -226,7 +226,7 @@ def get_name(parser, args):
         "show",
         "workers",
         "world_size",
-    ])
+    }
     parts = []
     name_args = dict(args.__dict__)
     for name, value in name_args.items():
@@ -237,8 +237,4 @@ def get_name(parser, args):
                 parts.append(f"{name}={value.name}")
             else:
                 parts.append(f"{name}={value}")
-    if parts:
-        name = " ".join(parts)
-    else:
-        name = "default"
-    return name
+    return " ".join(parts) if parts else "default"

@@ -56,12 +56,10 @@ class BaseQuantizer:
                 self._rnns.append(module)
             for name, param in list(module.named_parameters(recurse=False)):
                 full_name = f"{module_name}.{name}"
-                matched = False
-                for pattern in self.exclude:
-                    if fnmatch(full_name, pattern) or fnmatch(name, pattern):
-                        matched = True
-                        break
-
+                matched = any(
+                    fnmatch(full_name, pattern) or fnmatch(name, pattern)
+                    for pattern in self.exclude
+                )
                 if param.numel() <= min_params or matched:
                     if id(param) in previous:
                         continue

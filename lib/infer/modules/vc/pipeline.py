@@ -85,7 +85,11 @@ class Pipeline(object):
         self.t_center = self.sr * self.x_center  # 查询切点位置
         self.t_max = self.sr * self.x_max  # 免查询时长阈值
         self.device = config.device
-        self.model_rmvpe = RMVPE("%s/rmvpe.pt" % os.environ["rmvpe_root"], is_half=self.is_half, device=self.device)
+        self.model_rmvpe = RMVPE(
+            f'{os.environ["rmvpe_root"]}/rmvpe.pt',
+            is_half=self.is_half,
+            device=self.device,
+        )
         self.f0_method_dict = {
             "pm": self.get_pm,
             "harvest": self.get_harvest,
@@ -96,7 +100,7 @@ class Pipeline(object):
             "crepe-tiny": partial(self.get_f0_official_crepe_computation, model='model'),
             "mangio-crepe": self.get_f0_crepe_computation,
             "mangio-crepe-tiny": partial(self.get_f0_crepe_computation, model='model'),
-            
+
         }
         self.note_dict = [
             65.41, 69.30, 73.42, 77.78, 82.41, 87.31,
@@ -144,8 +148,8 @@ class Pipeline(object):
             audio = torch.mean(audio, dim=0, keepdim=True).detach()
         audio = audio.detach()
         hop_length = kwargs.get('crepe_hop_length', 160)
-        model = kwargs.get('model', 'full') 
-        print("Initiating prediction with a crepe_hop_length of: " + str(hop_length))
+        model = kwargs.get('model', 'full')
+        print(f"Initiating prediction with a crepe_hop_length of: {str(hop_length)}")
         pitch: Tensor = torchcrepe.predict(
             audio,
             self.sr,
@@ -166,8 +170,7 @@ class Pipeline(object):
             np.arange(0, len(source)),
             source,
         )
-        f0 = np.nan_to_num(target)
-        return f0  # Resized f0
+        return np.nan_to_num(target)
     
     def get_f0_official_crepe_computation(
         self,
@@ -244,18 +247,14 @@ class Pipeline(object):
     def get_rmvpe(self, x, *args, **kwargs):
         if not hasattr(self, "model_rmvpe"):
             from lib.infer.infer_libs.rmvpe import RMVPE
-            
-            logger.info(
-                "Loading rmvpe model,%s" % "%s/rmvpe.pt" % os.environ["rmvpe_root"]
-            )
+
+            logger.info(f'Loading rmvpe model,{os.environ["rmvpe_root"]}/rmvpe.pt')
             self.model_rmvpe = RMVPE(
-                "%s/rmvpe.pt" % os.environ["rmvpe_root"],
+                f'{os.environ["rmvpe_root"]}/rmvpe.pt',
                 is_half=self.is_half,
                 device=self.device,
             )
-        f0 = self.model_rmvpe.infer_from_audio(x, thred=0.03)
-            
-        return f0
+        return self.model_rmvpe.infer_from_audio(x, thred=0.03)
     
 
     def get_pitch_dependant_rmvpe(self, x, f0_min=1, f0_max=40000, *args, **kwargs):
@@ -286,8 +285,7 @@ class Pipeline(object):
           'f0_max': f0_max, 'time_step': time_step, 'filter_radius': filter_radius, 
           'crepe_hop_length': crepe_hop_length, 'model': "full"
         }
-        methods_str = re.search('hybrid\[(.+)\]', methods_str)
-        if methods_str:  # Ensure a match was found
+        if methods_str := re.search('hybrid\[(.+)\]', methods_str):
             methods = [method.strip() for method in methods_str.group(1).split('+')]
         f0_computation_stack = []
 
@@ -310,8 +308,7 @@ class Pipeline(object):
             print(len(fc))
 
         print(f"Calculating hybrid median f0 from the stack of: {str(methods)}")
-        f0_median_hybrid = np.nanmedian(f0_computation_stack, axis=0)
-        return f0_median_hybrid
+        return np.nanmedian(f0_computation_stack, axis=0)
     
     def get_f0(
         self,
@@ -404,10 +401,7 @@ class Pipeline(object):
         protect,
     ):  # ,file_index,file_big_npy
         feats = torch.from_numpy(audio0)
-        if self.is_half:
-            feats = feats.half()
-        else:
-            feats = feats.float()
+        feats = feats.half() if self.is_half else feats.float()
         if feats.dim() == 2:  # double channels
             feats = feats.mean(-1)
         assert feats.dim() == 1, feats.dim()
@@ -584,9 +578,7 @@ class Pipeline(object):
             try:
                 with open(f0_file.name, "r") as f:
                     lines = f.read().strip("\n").split("\n")
-                inp_f0 = []
-                for line in lines:
-                    inp_f0.append([float(i) for i in line.split(",")])
+                inp_f0 = [[float(i) for i in line.split(",")] for line in lines]
                 inp_f0 = np.array(inp_f0, dtype="float32")
             except:
                 traceback.print_exc()
@@ -616,7 +608,7 @@ class Pipeline(object):
         times[1] += t2 - t1
 
         with tqdm(total=len(opt_ts), desc="Processing", unit="window") as pbar:
-            for i, t in enumerate(opt_ts):
+            for t in opt_ts:
                 t = t // self.window * self.window
                 start = s
                 end = t + self.t_pad2 + self.window
@@ -632,7 +624,7 @@ class Pipeline(object):
         pitch_slice = pitch[:, t // self.window:] if if_f0 and t is not None else pitch
         pitchf_slice = pitchf[:, t // self.window:] if if_f0 and t is not None else pitchf
         audio_opt.append(self.vc(model, net_g, sid, audio_slice, pitch_slice, pitchf_slice, times, index, big_npy, index_rate, version, protect)[self.t_pad_tgt : -self.t_pad_tgt])
-        
+
         audio_opt = np.concatenate(audio_opt)
         if rms_mix_rate != 1:
             audio_opt = change_rms(audio, 16000, audio_opt, tgt_sr, rms_mix_rate)

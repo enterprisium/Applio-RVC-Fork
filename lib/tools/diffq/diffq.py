@@ -98,16 +98,14 @@ class DiffQuantizer(BaseQuantizer):
     def _get_bits(self, logit: torch.Tensor):
         if self.param == "noise":
             return torch.log2(1 + 1 / self._get_noise_scale(logit))
-        else:
-            t = torch.sigmoid(logit)
-            return self.max_bits * t + (1 - t) * self.min_bits
+        t = torch.sigmoid(logit)
+        return self.max_bits * t + (1 - t) * self.min_bits
 
     def _get_noise_scale(self, logit: torch.Tensor):
-        if self.param == "noise":
-            t = torch.sigmoid(logit)
-            return torch.exp(t * math.log(self._min_noise) + (1 - t) * math.log(self._max_noise))
-        else:
+        if self.param != "noise":
             return 1 / (2 ** self._get_bits(logit) - 1)
+        t = torch.sigmoid(logit)
+        return torch.exp(t * math.log(self._min_noise) + (1 - t) * math.log(self._max_noise))
 
     def _register_param(self, name, param, module, other):
         if other is not None:
@@ -124,10 +122,7 @@ class DiffQuantizer(BaseQuantizer):
         assert 0 < t < 1
         logit = torch.logit(torch.tensor(float(t)))
         assert abs(self._get_bits(logit) - self.init_bits) < 1e-5
-        if self.group_size > 0:
-            nparam = param.numel() // self.group_size
-        else:
-            nparam = 1
+        nparam = param.numel() // self.group_size if self.group_size > 0 else 1
         logit = torch.nn.Parameter(
             torch.full(
                 (nparam,),
@@ -143,10 +138,7 @@ class DiffQuantizer(BaseQuantizer):
         for group in optimizer.param_groups:
             new_params = []
             for q in list(group["params"]):
-                matched = False
-                for p in params:
-                    if p is q:
-                        matched = True
+                matched = any(p is q for p in params)
                 if not matched:
                     new_params.append(q)
             group["params"][:] = new_params
@@ -212,10 +204,7 @@ class DiffQuantizer(BaseQuantizer):
             bits = self.extra_bits + self._get_bits(qparam.logit)
             if exact:
                 bits = bits.round().clamp(1, 15)
-            if self.group_size == 0:
-                group_size = qparam.param.numel()
-            else:
-                group_size = self.group_size
+            group_size = qparam.param.numel() if self.group_size == 0 else self.group_size
             subtotal += group_size * bits.sum()
             subtotal += 2 * 32  # param scale
 

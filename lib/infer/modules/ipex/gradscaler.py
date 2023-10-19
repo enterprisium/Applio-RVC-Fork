@@ -47,7 +47,7 @@ def _unscale_grads_(self, optimizer, inv_scale, found_inf, allow_fp16): # pylint
                     to_unscale.dtype
                 ].append(to_unscale)
 
-        for _, per_dtype_grads in per_device_and_dtype_grads.items():
+        for per_dtype_grads in per_device_and_dtype_grads.values():
             for grads in per_dtype_grads.values():
                 core._amp_foreach_non_finite_check_and_unscale_(
                     grads,
@@ -146,7 +146,7 @@ def update(self, new_scale=None):
             for found_inf in state["found_inf_per_device"].values()
         ]
 
-        assert len(found_infs) > 0, "No inf checks were recorded prior to update."
+        assert found_infs, "No inf checks were recorded prior to update."
 
         found_inf_combined = found_infs[0]
         if len(found_infs) > 1:

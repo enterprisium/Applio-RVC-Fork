@@ -77,23 +77,26 @@ def main():
             print("Error: distributed training is only available with cuda device", file=sys.stderr)
             sys.exit(1)
         th.cuda.set_device(args.rank % th.cuda.device_count())
-        distributed.init_process_group(backend="nccl",
-                                       init_method="tcp://" + args.master,
-                                       rank=args.rank,
-                                       world_size=args.world_size)
+        distributed.init_process_group(
+            backend="nccl",
+            init_method=f"tcp://{args.master}",
+            rank=args.rank,
+            world_size=args.world_size,
+        )
 
     checkpoint = args.checkpoints / f"{name}.th"
     checkpoint_tmp = args.checkpoints / f"{name}.th.tmp"
     if args.restart and checkpoint.exists() and args.rank == 0:
         checkpoint.unlink()
 
-    if args.test or args.test_pretrained:
+    if args.test:
         args.epochs = 1
         args.repeat = 0
-        if args.test:
-            model = load_model(args.models / args.test)
-        else:
-            model = load_pretrained(args.test_pretrained)
+        model = load_model(args.models / args.test)
+    elif args.test_pretrained:
+        args.epochs = 1
+        args.repeat = 0
+        model = load_pretrained(args.test_pretrained)
     elif args.tasnet:
         model = ConvTasNet(audio_channels=args.audio_channels,
                            samplerate=args.samplerate, X=args.X,
@@ -171,11 +174,7 @@ def main():
     augment = nn.Sequential(*augment).to(device)
     print("Agumentation pipeline:", augment)
 
-    if args.mse:
-        criterion = nn.MSELoss()
-    else:
-        criterion = nn.L1Loss()
-
+    criterion = nn.MSELoss() if args.mse else nn.L1Loss()
     # Setting number of samples so that all convolution windows are full.
     # Prevents hard to debug mistake with the prediction being shifted compared
     # to the input mixture.

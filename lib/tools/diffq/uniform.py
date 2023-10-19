@@ -30,10 +30,7 @@ def uniform_quantize(p: torch.Tensor, bits: torch.Tensor = torch.tensor(8.)):
     p = (p - mn) / (mx - mn)  # put p in [0, 1]
     unit = 1 / (num_levels - 1)  # quantization unit
     levels = (p / unit).round()
-    if (bits <= 8).all():
-        levels = levels.byte()
-    else:
-        levels = levels.short()
+    levels = levels.byte() if (bits <= 8).all() else levels.short()
     return levels, (mn, mx)
 
 
@@ -65,7 +62,7 @@ class UniformQuantizer(BaseQuantizer):
             detect_bound (bool): if True, will detect bound parameters and reuse
                 the same quantized tensor for both.
         """
-        self.bits = float(bits)
+        self.bits = bits
         self.qat = qat
 
         super().__init__(model, min_size, float16, exclude, detect_bound)
@@ -74,17 +71,17 @@ class UniformQuantizer(BaseQuantizer):
         return simple_repr(self, )
 
     def _pre_forward_train(self):
-        if self.qat:
-            for qparam in self._qparams:
-                if qparam.other is not None:
-                    new_param = qparam.other.module._parameters[qparam.other.name]
-                else:
-                    quantized = self._quantize_param(qparam)
-                    qvalue = self._unquantize_param(qparam, quantized)
-                    new_param = qparam.param + (qvalue - qparam.param).detach()
-                qparam.module._parameters[qparam.name] = new_param
-            return True
-        return False
+        if not self.qat:
+            return False
+        for qparam in self._qparams:
+            if qparam.other is not None:
+                new_param = qparam.other.module._parameters[qparam.other.name]
+            else:
+                quantized = self._quantize_param(qparam)
+                qvalue = self._unquantize_param(qparam, quantized)
+                new_param = qparam.param + (qvalue - qparam.param).detach()
+            qparam.module._parameters[qparam.name] = new_param
+        return True
 
     def _post_forward_train(self):
         if self.qat:
@@ -106,10 +103,11 @@ class UniformQuantizer(BaseQuantizer):
         Non differentiable model size in MB.
         """
         total = super().model_size()
-        subtotal = 0
-        for qparam in self._qparams:
-            if qparam.other is None:  # if parameter is bound, count only one copy.
-                subtotal += self.bits * qparam.param.numel() + 64  # 2 float for the overall scales
+        subtotal = sum(
+            self.bits * qparam.param.numel() + 64
+            for qparam in self._qparams
+            if qparam.other is None
+        )
         subtotal /= 2**20 * 8  # bits to MegaBytes
         return total + subtotal
 

@@ -32,8 +32,7 @@ class AudioFile:
         self._info = None
 
     def __repr__(self):
-        features = [("path", self.path)]
-        features.append(("samplerate", self.samplerate()))
+        features = [("path", self.path), ("samplerate", self.samplerate())]
         features.append(("channels", self.channels()))
         features.append(("streams", len(self)))
         features_str = ", ".join(f"{name}={value}" for name, value in features)

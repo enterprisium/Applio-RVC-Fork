@@ -153,8 +153,7 @@ if config.dml == True:
 
     def forward_dml(ctx, x, scale):
         ctx.scale = scale
-        res = x.clone().detach()
-        return res
+        return x.clone().detach()
 
     fairseq.modules.grad_multiply.GradMultiply.forward = forward_dml
 
@@ -207,7 +206,7 @@ if torch.cuda.is_available() or ngpu != 0:
                     + 0.4
                 )
             )
-if if_gpu_ok and len(gpu_infos) > 0:
+if if_gpu_ok and gpu_infos:
     gpu_info = "\n".join(gpu_infos)
     default_batch_size = min(mem) // 2
 else:
@@ -289,39 +288,36 @@ uvr5_names = [
 
 check_for_name = lambda: sorted(names)[0] if names else ""
 
-datasets = []
-for foldername in os.listdir(os.path.join(now_dir, datasets_root)):
-    if "." not in foldername:
-        datasets.append(os.path.join(now_dir, "datasets", foldername))
+datasets = [
+    os.path.join(now_dir, "datasets", foldername)
+    for foldername in os.listdir(os.path.join(now_dir, datasets_root))
+    if "." not in foldername
+]
 
 
 def get_dataset():
-    if len(datasets) > 0:
-        return sorted(datasets)[0]
-    else:
-        return ""
+    return sorted(datasets)[0] if len(datasets) > 0 else ""
 
 
 def update_model_choices(select_value):
     model_ids = get_model_list()
     model_ids_list = list(model_ids)
-    if select_value == "VR":
-        return {"choices": uvr5_names, "__type__": "update"}
-    elif select_value == "MDX":
+    if select_value == "MDX":
         return {"choices": model_ids_list, "__type__": "update"}
+    elif select_value == "VR":
+        return {"choices": uvr5_names, "__type__": "update"}
 
 
 def update_dataset_list(name):
-    new_datasets = []
-    for foldername in os.listdir(os.path.join(now_dir, datasets_root)):
-        if "." not in foldername:
-            new_datasets.append(
-                os.path.join(
-                    now_dir,
-                    "datasets",
-                    foldername,
-                )
-            )
+    new_datasets = [
+        os.path.join(
+            now_dir,
+            "datasets",
+            foldername,
+        )
+        for foldername in os.listdir(os.path.join(now_dir, datasets_root))
+        if "." not in foldername
+    ]
     return gr.Dropdown.update(choices=new_datasets)
 
 

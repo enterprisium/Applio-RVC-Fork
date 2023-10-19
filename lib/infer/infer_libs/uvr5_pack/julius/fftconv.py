@@ -32,8 +32,7 @@ def _old_rfft(x: torch.Tensor):
 
 
 def _old_irfft(x: torch.Tensor, length: int):
-    result = torch.irfft(x, 1, signal_sizes=(length,))  # type: ignore
-    return result
+    return torch.irfft(x, 1, signal_sizes=(length,))
 
 
 def _new_irfft(x: torch.Tensor, length: int):

@@ -111,10 +111,7 @@ def create_model(hps, model_f0, model_nof0):
     )
 
 def move_model_to_cuda_if_available(model, rank):
-    if torch.cuda.is_available():
-        return model.cuda(rank)
-    else:
-        return model
+    return model.cuda(rank) if torch.cuda.is_available() else model
 
 def create_optimizer(model, hps):
     return torch.optim.AdamW(
@@ -283,7 +280,7 @@ def run(rank, n_gpus, hps):
         global_step = 0
         if hps.pretrainG != "":
             if rank == 0:
-                logger.info("loaded pretrained %s" % (hps.pretrainG))
+                logger.info(f"loaded pretrained {hps.pretrainG}")
             if hasattr(net_g, "module"):
                 logger.info(
                     net_g.module.load_state_dict(
@@ -298,7 +295,7 @@ def run(rank, n_gpus, hps):
                 )  ##测试不加载优化器
         if hps.pretrainD != "":
             if rank == 0:
-                logger.info("loaded pretrained %s" % (hps.pretrainD))
+                logger.info(f"loaded pretrained {hps.pretrainD}")
             if hasattr(net_d, "module"):
                 logger.info(
                     net_d.module.load_state_dict(
